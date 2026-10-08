@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelVault - Folder Photo Gallery</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-full flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-folder-open text-lg"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-xl text-slate-900 tracking-tight">PixelVault <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium ml-1 align-middle">Folders</span></span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openNewFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-sm shadow-blue-500/20 flex items-center space-x-2">
+                    <i class="fa-solid fa-folder-plus"></i>
+                    <span>New Folder</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        
+        <!-- Breadcrumb / Navigation Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center space-x-2 text-sm">
+                <button onclick="navHome()" class="text-blue-600 font-semibold hover:underline flex items-center space-x-1">
+                    <i class="fa-solid fa-house"></i>
+                    <span>All Folders</span>
+                </button>
+                <span id="breadcrumbSeparator" class="text-slate-300 hidden">/</span>
+                <span id="breadcrumbCurrent" class="font-bold text-slate-800 hidden"></span>
+            </div>
+
+            <div id="folderActions" class="hidden flex items-center space-x-2">
+                <button onclick="openUploadModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center space-x-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Upload Photos</span>
+                </button>
+                <button onclick="downloadAllInFolder()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 py-2 rounded-xl text-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download All</span>
+                </button>
+                <button onclick="deleteCurrentFolder()" class="bg-red-50 hover:bg-red-100 text-red-600 font-medium px-3.5 py-2 rounded-xl text-sm transition" title="Delete Folder">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 1: Folders Dashboard -->
+        <div id="foldersView" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900">Your Folders</h3>
+                <span id="folderCountLabel" class="text-xs text-slate-500">0 folders</span>
+            </div>
+
+            <!-- Empty Folders State -->
+            <div id="emptyFoldersState" class="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4 shadow-sm hidden">
+                <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-folder-closed"></i>
+                </div>
+                <div class="max-w-sm mx-auto">
+                    <h4 class="text-base font-bold text-slate-800">No folders created yet</h4>
+                    <p class="text-sm text-slate-500 mt-1">Create your first folder to start grouping and organizing your photos neatly.</p>
+                </div>
+                <button onclick="openNewFolderModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition inline-flex items-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-folder-plus"></i>
+                    <span>Create Folder</span>
+                </button>
+            </div>
+
+            <!-- Folders Grid -->
+            <div id="foldersGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- VIEW 2: Photo Inside Folder Dashboard -->
+        <div id="photosView" class="space-y-4 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h3 id="activeFolderTitle" class="text-xl font-bold text-slate-900">Folder Name</h3>
+                    <p id="activeFolderSubtitle" class="text-sm text-slate-500">0 photos stored</p>
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchPhotoInput" placeholder="Search in folder..." oninput="filterFolderPhotos()" class="bg-white border border-slate-200 text-slate-800 text-sm rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-blue-500 w-full sm:w-64 shadow-sm">
+                </div>
+            </div>
+
+            <!-- Empty Photos State -->
+            <div id="emptyPhotosState" class="bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4 shadow-sm hidden">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-regular fa-image"></i>
+                </div>
+                <div class="max-w-sm mx-auto">
+                    <h4 class="text-base font-bold text-slate-800">This folder is empty</h4>
+                    <p class="text-sm text-slate-500 mt-1">Upload images to this folder to view, download, or manage them anytime.</p>
+                </div>
+                <button onclick="openUploadModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition inline-flex items-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Upload Photos Now</span>
+                </button>
+            </div>
+
+            <!-- Photos Grid -->
+            <div id="photosGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Create New Folder -->
+    <div id="newFolderModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden p-6 space-y-5">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900">Create New Folder</h3>
+                <button onclick="closeNewFolderModal()" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Folder Name</label>
+                    <input type="text" id="newFolderNameInput" placeholder="e.g. Vacation 2026, Family, Work" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Folder Color Theme</label>
+                    <div class="flex space-x-3 pt-1" id="colorPickerContainer">
+                        <button type="button" onclick="selectColor('blue')" class="w-8 h-8 rounded-full bg-blue-500 ring-2 ring-offset-2 ring-blue-500 color-option" data-color="blue"></button>
+                        <button type="button" onclick="selectColor('emerald')" class="w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-offset-2 ring-transparent color-option" data-color="emerald"></button>
+                        <button type="button" onclick="selectColor('amber')" class="w-8 h-8 rounded-full bg-amber-500 ring-2 ring-offset-2 ring-transparent color-option" data-color="amber"></button>
+                        <button type="button" onclick="selectColor('purple')" class="w-8 h-8 rounded-full bg-purple-500 ring-2 ring-offset-2 ring-transparent color-option" data-color="purple"></button>
+                        <button type="button" onclick="selectColor('rose')" class="w-8 h-8 rounded-full bg-rose-500 ring-2 ring-offset-2 ring-transparent color-option" data-color="rose"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex space-x-3 pt-2">
+                <button onclick="closeNewFolderModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 px-4 rounded-xl transition text-sm">Cancel</button>
+                <button onclick="createFolderSubmit()" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition text-sm shadow-sm shadow-blue-500/20">Create Folder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Upload Photos into Folder -->
+    <div id="uploadModal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden p-6 space-y-5">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900">Upload Photos</h3>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- Dropzone -->
+            <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-emerald-500 transition cursor-pointer bg-slate-50/50 relative">
+                <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" multiple accept="image/*">
+                <div class="flex flex-col items-center justify-center space-y-3">
+                    <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl shadow-inner">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-slate-700">Click to upload <span class="font-normal text-slate-500">or drag and drop</span></p>
+                        <p class="text-xs text-slate-400 mt-1">PNG, JPG or GIF (max. 10MB each)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+                <span id="uploadQueueCount">0 photos selected</span>
+                <button onclick="uploadPhotosSubmit()" id="uploadSubmitBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Upload to Folder
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Lightbox Photo Preview -->
+    <div id="lightboxModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <span id="lightboxTitle" class="font-semibold text-slate-800 text-sm truncate">Photo Details</span>
+                <button onclick="closeLightbox()" class="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-900 flex-grow flex items-center justify-center overflow-hidden">
+                <img id="lightboxImage" src="" alt="Preview" class="max-h-[60vh] max-w-full object-contain rounded-lg">
+            </div>
+            <div class="p-4 bg-white border-t border-slate-200 flex items-center justify-between">
+                <span id="lightboxMeta" class="text-xs text-slate-500">Size: 0 KB</span>
+                <div class="flex space-x-2">
+                    <button id="lightboxDownloadBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Download</span>
+                    </button>
+                    <button onclick="closeLightbox()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2 rounded-xl transition">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastText">Action completed successfully</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Data Schema: folders = [{ id, name, color, photos: [{ id, name, size, rawSize, date, dataUrl }] }]
+        let appData = [];
+        let currentFolderId = null;
+        let selectedFolderColor = 'blue';
+        let pendingUploadFiles = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            renderFolders();
+
+            // Dropzone setup
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+
+            fileInput.addEventListener('change', (e) => {
+                handleSelectedFiles(e.target.files);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add('border-emerald-500', 'bg-emerald-50/40');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/40');
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                handleSelectedFiles(files);
+            });
+        });
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('pixelvault_folders_data');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch(e) {
+                    appData = [];
+                }
+            } else {
+                // Default sample folder if completely empty
+                appData = [
+                    {
+                        id: 'folder_default',
+                        name: 'Sample Vacation',
+                        color: 'blue',
+                        photos: []
+                    }
+                ];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('pixelvault_folders_data', JSON.stringify(appData));
+            } catch(e) {
+                showToast('Storage quota exceeded! Try uploading smaller or fewer photos.', 'error');
+            }
+        }
+
+        // Navigation
+        function navHome() {
+            currentFolderId = null;
+            document.getElementById('breadcrumbSeparator').classList.add('hidden');
+            document.getElementById('breadcrumbCurrent').classList.add('hidden');
+            document.getElementById('folderActions').classList.add('hidden');
+            document.getElementById('foldersView').classList.remove('hidden');
+            document.getElementById('photosView').classList.add('hidden');
+            renderFolders();
+        }
+
+        function openFolder(folderId) {
+            currentFolderId = folderId;
+            const folder = appData.find(f => f.id === folderId);
+            if (!folder) return;
+
+            document.getElementById('breadcrumbSeparator').classList.remove('hidden');
+            const bc = document.getElementById('breadcrumbCurrent');
+            bc.innerText = folder.name;
+            bc.classList.remove('hidden');
+            document.getElementById('folderActions').classList.remove('hidden');
+
+            document.getElementById('foldersView').classList.add('hidden');
+            document.getElementById('photosView').classList.remove('hidden');
+
+            document.getElementById('activeFolderTitle').innerText = folder.name;
+            renderPhotosInCurrentFolder();
+        }
+
+        // Folder Operations
+        function renderFolders() {
+            const grid = document.getElementById('foldersGrid');
+            const emptyState = document.getElementById('emptyFoldersState');
+            const countLabel = document.getElementById('folderCountLabel');
+
+            countLabel.innerText = `${appData.length} folder${appData.length === 1 ? '' : 's'}`;
+
+            if (appData.length === 0) {
+                emptyState.classList.remove('hidden');
+                grid.innerHTML = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = '';
+
+            appData.forEach(folder => {
+                const photoCount = folder.photos.length;
+                const coverImg = photoCount > 0 ? folder.photos[0].dataUrl : null;
+                const colorHex = getColorClassHex(folder.color);
+
+                const card = document.createElement('div');
+                card.className = 'group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between cursor-pointer';
+                card.onclick = () => openFolder(folder.id);
+
+                card.innerHTML = `
+                    <div class="relative aspect-video bg-slate-100 overflow-hidden flex items-center justify-center">
+                        ${coverImg ? 
+                            `<img src="${coverImg}" alt="${escapeHtml(folder.name)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">` :
+                            `<div class="text-4xl text-slate-300"><i class="fa-solid fa-folder" style="color: ${colorHex};"></i></div>`
+                        }
+                        <div class="absolute top-3 left-3 bg-slate-900/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-semibold">
+                            <i class="fa-solid fa-image mr-1"></i> ${photoCount}
+                        </div>
+                    </div>
+                    <div class="p-4 flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm truncate" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">${photoCount} photo${photoCount === 1 ? '' : 's'} stored</p>
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteFolderPrompt('${folder.id}')" class="text-slate-300 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition" title="Delete Folder">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function openNewFolderModal() {
+            document.getElementById('newFolderNameInput').value = '';
+            selectedFolderColor = 'blue';
+            updateColorPickerUI();
+            document.getElementById('newFolderModal').classList.remove('hidden');
+        }
+
+        function closeNewFolderModal() {
+            document.getElementById('newFolderModal').classList.add('hidden');
+        }
+
+        function selectColor(color) {
+            selectedFolderColor = color;
+            updateColorPickerUI();
+        }
+
+        function updateColorPickerUI() {
+            const buttons = document.querySelectorAll('#colorPickerContainer button');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-color') === selectedFolderColor) {
+                    btn.classList.add('ring-blue-500');
+                    btn.classList.remove('ring-transparent');
+                } else {
+                    btn.classList.remove('ring-blue-500');
+                    btn.classList.add('ring-transparent');
+                }
+            });
+        }
+
+        function createFolderSubmit() {
+            const nameInput = document.getElementById('newFolderNameInput').value.trim();
+            if (!nameInput) {
+                showToast('Please enter a folder name.', 'error');
+                return;
+            }
+
+            const newFolder = {
+                id: 'folder_' + Date.now(),
+                name: nameInput,
+                color: selectedFolderColor,
+                photos: []
+            };
+
+            appData.push(newFolder);
+            saveToLocalStorage();
+            closeNewFolderModal();
+            renderFolders();
+            showToast(`Folder "${nameInput}" created successfully!`);
+        }
+
+        function deleteFolderPrompt(folderId) {
+            const folder = appData.find(f => f.id === folderId);
+            if (!folder) return;
+
+            if (confirm(`Are you sure you want to delete folder "${folder.name}" and all of its photos?`)) {
+                appData = appData.filter(f => f.id !== folderId);
+                saveToLocalStorage();
+                if (currentFolderId === folderId) {
+                    navHome();
+                } else {
+                    renderFolders();
+                }
+                showToast('Folder deleted successfully');
+            }
+        }
+
+        function deleteCurrentFolder() {
+            if (currentFolderId) {
+                deleteFolderPrompt(currentFolderId);
+            }
+        }
+
+        // Photo Upload & Management
+        function openUploadModal() {
+            pendingUploadFiles = [];
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadQueueCount').innerText = '0 photos selected';
+            document.getElementById('uploadSubmitBtn').setAttribute('disabled', 'true');
+            document.getElementById('uploadModal').classList.remove('hidden');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+        }
+
+        function handleSelectedFiles(files) {
+            pendingUploadFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            const count = pendingUploadFiles.length;
+            document.getElementById('uploadQueueCount').innerText = `${count} photo${count === 1 ? '' : 's'} selected`;
+            const submitBtn = document.getElementById('uploadSubmitBtn');
+            if (count > 0) {
+                submitBtn.removeAttribute('disabled');
+            } else {
+                submitBtn.setAttribute('disabled', 'true');
+            }
+        }
+
+        function uploadPhotosSubmit() {
+            if (pendingUploadFiles.length === 0 || !currentFolderId) return;
+
+            const folder = appData.find(f => f.id === currentFolderId);
+            if (!folder) return;
+
+            let processedCount = 0;
+            pendingUploadFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const newPhoto = {
+                        id: 'photo_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                        name: file.name,
+                        size: formatBytes(file.size),
+                        rawSize: file.size,
+                        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                        dataUrl: e.target.result
+                    };
+                    folder.photos.unshift(newPhoto);
+                    processedCount++;
+
+                    if (processedCount === pendingUploadFiles.length) {
+                        saveToLocalStorage();
+                        closeUploadModal();
+                        renderPhotosInCurrentFolder();
+                        showToast('Photos uploaded to folder successfully!');
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderPhotosInCurrentFolder(filteredList = null) {
+            const folder = appData.find(f => f.id === currentFolderId);
+            if (!folder) return;
+
+            const list = filteredList || folder.photos;
+            const grid = document.getElementById('photosGrid');
+            const emptyState = document.getElementById('emptyPhotosState');
+            const subtitle = document.getElementById('activeFolderSubtitle');
+
+            subtitle.innerText = `${folder.photos.length} item${folder.photos.length === 1 ? '' : 's'} stored`;
+
+            if (list.length === 0) {
+                emptyState.classList.remove('hidden');
+                grid.innerHTML = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = '';
+
+            list.forEach(photo => {
+                const card = document.createElement('div');
+                card.className = 'group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between';
+                card.innerHTML = `
+                    <div class="relative aspect-square bg-slate-100 overflow-hidden cursor-pointer" onclick="openLightbox('${photo.id}')">
+                        <img src="${photo.dataUrl}" alt="${escapeHtml(photo.name)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" onerror="this.src='https://placehold.co/400x400/e2e8f0/64748b?text=Error'">
+                        <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                            <span class="bg-white/90 text-slate-800 p-2 rounded-xl text-xs font-semibold shadow backdrop-blur-sm">
+                                <i class="fa-solid fa-expand"></i> View
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-3.5 space-y-1">
+                        <h5 class="text-xs font-semibold text-slate-800 truncate" title="${escapeHtml(photo.name)}">${escapeHtml(photo.name)}</h5>
+                        <div class="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>${photo.size}</span>
+                            <span>${photo.date}</span>
+                        </div>
+                        <div class="pt-2 flex items-center justify-between border-t border-slate-100 mt-2">
+                            <button onclick="downloadPhoto('${photo.id}')" class="text-blue-600 hover:text-blue-700 font-medium text-xs flex items-center space-x-1 py-1 px-2 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Download</span>
+                            </button>
+                            <button onclick="deletePhoto('${photo.id}')" class="text-slate-400 hover:text-red-600 font-medium text-xs flex items-center space-x-1 py-1 px-2 rounded-lg hover:bg-red-50 transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterFolderPhotos() {
+            const folder = appData.find(f => f.id === currentFolderId);
+            if (!folder) return;
+
+            const query = document.getElementById('searchPhotoInput').value.toLowerCase();
+            const filtered = folder.photos.filter(p => p.name.toLowerCase().includes(query));
+            renderPhotosInCurrentFolder(filtered);
+        }
+
+        function downloadPhoto(photoId) {
+            const folder = appData.find(f => f.id === currentFolderId);
+            if (!folder) return;
+            const photo = folder.photos.find(p => p.id === photoId);
+            if (!photo) return;
+
+            const a = document.createElement('a');
+            a.href = photo.dataUrl;
+            a.download = photo.name || 'photo.jpg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast(`Downloading "${photo.name}"...`);
+        }
+
+        function downloadAllInFolder() {
+            const folder = appData.find(f => f.id === currentFolderId);
+            if (!folder || folder.photos.length === 0) {
+                showToast('No photos to download in this folder.', 'error');
+                return;
+            }
+
+            folder.photos.forEach((photo, index) => {
+                setTimeout(() => {
+                    const a = document.createElement('a');
+                    a.href = photo.dataUrl;
+                    a.download = photo.name || `photo_${index}.jpg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, index * 300);
+            });
+
+            showToast(`Initiated batch download for ${folder.photos.length} photos!`);
+        }
+
+        function deletePhoto(photoId) {
+            if (confirm('Are you sure you want to delete this photo?')) {
+                const folder = appData.find(f => f.id === currentFolderId);
+                if (!folder) return;
+
+                folder.photos = folder.photos.filter(p => p.id !== photoId);
+                saveToLocalStorage();
+                renderPhotosInCurrentFolder();
+                showToast('Photo deleted successfully');
+            }
+        }
+
+        // Lightbox
+        function openLightbox(photoId) {
+            const folder = appData.find(f => f.id === currentFolderId);
+            if (!folder) return;
+            const photo = folder.photos.find(p => p.id === photoId);
+            if (!photo) return;
+
+            document.getElementById('lightboxTitle').innerText = photo.name;
+            document.getElementById('lightboxImage').src = photo.dataUrl;
+            document.getElementById('lightboxMeta').innerText = `Size: ${photo.size} | Uploaded: ${photo.date}`;
+            document.getElementById('lightboxDownloadBtn').onclick = () => downloadPhoto(photo.id);
+            document.getElementById('lightboxModal').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightboxModal').classList.add('hidden');
+        }
+
+        // Helpers
+        function getColorClassHex(color) {
+            switch(color) {
+                case 'emerald': return '#10b981';
+                case 'amber': return '#f59e0b';
+                case 'purple': return '#a855f7';
+                case 'rose': return '#f43f5e';
+                default: return '#3b82f6';
+            }
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toastNotification');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastText.innerText = message;
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-red-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
